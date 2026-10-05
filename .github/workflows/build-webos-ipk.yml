@@ -1,0 +1,72 @@
+name: Build LG webOS IPK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+    paths: [ "ipk_package/**", ".github/workflows/build-webos-ipk.yml", "build_ipk.sh" ]
+  pull_request:
+    branches: [ "main", "master" ]
+    paths: [ "ipk_package/**", ".github/workflows/build-webos-ipk.yml", "build_ipk.sh" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write   # needed only to attach the .ipk to a GitHub Release on tags
+
+jobs:
+  build-ipk:
+    name: Build LG webOS IPK Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate sources
+        run: |
+          node --check ipk_package/webos/js/app.js
+          node -e "const a=JSON.parse(require('fs').readFileSync('ipk_package/webos/appinfo.json','utf8'));
+                   for (const k of ['id','version','vendor','type','main','title','icon']) if(!a[k]) throw new Error('appinfo missing '+k);
+                   for (const f of [a.main,a.icon,a.largeIcon]) if(!require('fs').existsSync('ipk_package/webos/'+f)) throw new Error('missing file '+f);
+                   console.log('appinfo OK ->', a.id, a.version)"
+          # legacy-engine guard: webOS 4 (Chromium 53) has no async/await
+          if grep -nE "^\s*async |await " ipk_package/webos/js/app.js; then echo "async/await not allowed (webOS 4)"; exit 1; fi
+
+      - name: Install webOS CLI
+        run: |
+          npm install -g @webos-tools/cli
+          ares-package --version
+
+      - name: Package IPK
+        run: |
+          mkdir -p dist
+          ares-package --no-minify ipk_package/webos -o dist/
+          ls -lh dist/
+          test -n "$(ls dist/*.ipk 2>/dev/null)"
+
+      - name: Inspect IPK contents
+        run: |
+          for f in dist/*.ipk; do ar t "$f"; done
+
+      - name: Upload IPK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mluona-iptv-webos-ipk
+          path: dist/*.ipk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach IPK to GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.ipk

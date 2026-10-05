@@ -1,0 +1,16 @@
+{
+  "id": "com.mluona.iptv",
+  "version": "1.0.1",
+  "vendor": "Mluona",
+  "type": "web",
+  "main": "index.html",
+  "title": "Mluona IPTV",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgImage": "splash.png",
+  "splashBackground": "splash.png",
+  "resolution": "1920x1080",
+  "handlesRelaunch": true,
+  "disableBackHistoryAPI": true,
+  "uiRevision": 2
+}

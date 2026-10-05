@@ -1,0 +1,8 @@
+{
+  "name": "Mluona IPTV",
+  "description": "IPTV player for Android TV and touch screens supporting Xtream Codes API, M3U playlists, real stream fetching, and account session persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

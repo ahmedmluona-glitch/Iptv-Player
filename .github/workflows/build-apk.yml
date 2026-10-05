@@ -1,0 +1,118 @@
+name: Build & Sign Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+# Cancel previous in-flight runs to save minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Fast Build & Sign Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Gradle caching to dramatically speed up consecutive runs
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Prepare Signing Keystore
+        run: |
+          mkdir -p ~/.android
+          KEYSTORE_SECRET="${{ secrets.KEYSTORE_BASE64 }}"
+          if [ -n "$KEYSTORE_SECRET" ]; then
+            echo "Using custom keystore from GitHub Secrets..."
+            echo "$KEYSTORE_SECRET" | base64 --decode > release.keystore
+            ALIAS="${{ secrets.KEY_ALIAS }}"
+            [ -z "$ALIAS" ] && ALIAS="androiddebugkey"
+            SPASS="${{ secrets.STORE_PASSWORD }}"
+            [ -z "$SPASS" ] && SPASS="android"
+            KPASS="${{ secrets.KEY_PASSWORD }}"
+            [ -z "$KPASS" ] && KPASS="android"
+            echo "KEY_ALIAS=$ALIAS" >> $GITHUB_ENV
+            echo "STORE_PASS=$SPASS" >> $GITHUB_ENV
+            echo "KEY_PASS=$KPASS" >> $GITHUB_ENV
+          elif [ -f "debug.keystore.base64" ]; then
+            echo "::notice::KEYSTORE_BASE64 secret not found in repository. Using bundled keystore for automated signing."
+            base64 --decode debug.keystore.base64 > release.keystore
+            echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
+            echo "STORE_PASS=android" >> $GITHUB_ENV
+            echo "KEY_PASS=android" >> $GITHUB_ENV
+          else
+            echo "::notice::KEYSTORE_BASE64 secret not found. Generating self-signed keystore for signing."
+            keytool -genkeypair -v -keystore release.keystore -alias mluonakey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Mluona, OU=TV, O=Mluona, L=City, S=State, C=US"
+            echo "KEY_ALIAS=mluonakey" >> $GITHUB_ENV
+            echo "STORE_PASS=android" >> $GITHUB_ENV
+            echo "KEY_PASS=android" >> $GITHUB_ENV
+          fi
+          echo "KEYSTORE_PATH=release.keystore" >> $GITHUB_ENV
+          cp release.keystore debug.keystore
+          cp release.keystore ~/.android/debug.keystore
+
+      # Build optimized Release APK
+      - name: Assemble Release APK
+        env:
+          KEYSTORE_PATH: release.keystore
+          STORE_PASSWORD: ${{ env.STORE_PASS }}
+          KEY_PASSWORD: ${{ env.KEY_PASS }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS }}
+        run: |
+          ./gradlew assembleRelease \
+            -x test \
+            -x lint \
+            --parallel \
+            --build-cache
+
+      # Sign with apksigner (v1, v2, v3 schemes) so Android TV and mobile install smoothly
+      - name: Sign APK with apksigner
+        run: |
+          APK_PATH=$(find app/build/outputs -name "*.apk" | grep -v "unaligned" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::No APK file found in build outputs to sign."
+            exit 1
+          fi
+          echo "Found APK to sign at: $APK_PATH"
+          
+          APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools -name apksigner | sort -V | tail -n 1)
+          echo "Using apksigner at: $APKSIGNER"
+          
+          mkdir -p build-signed
+          $APKSIGNER sign --ks release.keystore \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$STORE_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out build-signed/mluona-iptv-release.apk \
+            "$APK_PATH"
+          
+          $APKSIGNER verify --verbose build-signed/mluona-iptv-release.apk
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mluona-iptv-release-apk
+          path: build-signed/mluona-iptv-release.apk
+          if-no-files-found: error
+          retention-days: 14

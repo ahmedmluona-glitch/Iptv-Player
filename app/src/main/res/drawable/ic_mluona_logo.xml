@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Left Wing of M in Pure Crisp Off-White -->
+    <path
+        android:fillColor="#F0F3F8"
+        android:pathData="M24,82 L24,26 L36,26 L54,58 L54,70 L38,44 L38,82 Z" />
+    <!-- Right Wing of M and Modernist L foot in Warm TV Amber Gold -->
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M54,70 L70,44 L70,26 L84,26 L84,70 L92,70 L92,82 L72,82 L72,38 L54,58 Z" />
+</vector>

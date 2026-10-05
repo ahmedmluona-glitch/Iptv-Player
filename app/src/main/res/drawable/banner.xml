@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#0D1217"
+        android:pathData="M0,0h320v180h-320z" />
+    <!-- Gradient TV Screen accent -->
+    <path
+        android:fillColor="#1A232C"
+        android:pathData="M30,20 h260 a16,16 0 0 1 16,16 v108 a16,16 0 0 1 -16,16 h-260 a16,16 0 0 1 -16,-16 v-108 a16,16 0 0 1 16,-16 z" />
+    <!-- Golden TV Antenna / Wings -->
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M160,34 L138,18 L142,14 L164,30 Z" />
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M160,34 L182,18 L178,14 L156,30 Z" />
+    <!-- Mluona stylized logo: 'M' + Play arrow -->
+    <path
+        android:fillColor="#F0F3F8"
+        android:pathData="M100,120 L100,60 L120,60 L145,95 L145,108 L122,78 L122,120 Z" />
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M145,108 L168,78 L168,60 L188,60 L188,108 L200,108 L200,120 L172,120 L172,74 L145,95 Z" />
+    <!-- Golden Play Triangle Accent -->
+    <path
+        android:fillColor="#E5A93C"
+        android:pathData="M214,80 L234,92 L214,104 Z" />
+</vector>
